@@ -219,7 +219,7 @@ public class KeycloakSmsAuthenticator implements Authenticator {
     @Override
     public boolean requiresUser() {
         logger.debug("requiresUser called ... returning true");
-        return true;
+        return false;
     }
     @Override
     public boolean configuredFor(KeycloakSession session, RealmModel realm, UserModel user) {
