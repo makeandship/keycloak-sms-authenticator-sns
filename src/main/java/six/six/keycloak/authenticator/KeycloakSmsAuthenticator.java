@@ -133,40 +133,98 @@ public class KeycloakSmsAuthenticator implements Authenticator {
     @Override
     public void action(AuthenticationFlowContext context) {
         logger.debug("action called ... context = " + context);
-        CODE_STATUS status = validateCode(context);
-        Response challenge = null;
-        switch (status) {
-            case EXPIRED:
-                challenge = context.form()
-                        .setError("sms-auth.code.expired")
-                        .createForm("sms-validation.ftl");
-                context.failureChallenge(AuthenticationFlowError.EXPIRED_CODE, challenge);
-                break;
+        
+        // get the phone number
+        String phoneNumber = getPhoneNumber(context);
+        
+        if (phoneNumber != null) {
+        	// validate and return if invalid
 
-            case INVALID:
-                if (context.getExecution().getRequirement() == AuthenticationExecutionModel.Requirement.OPTIONAL ||
-                        context.getExecution().getRequirement() == AuthenticationExecutionModel.Requirement.ALTERNATIVE) {
-                    logger.debug("Calling context.attempted()");
-                    context.attempted();
-                } else if (context.getExecution().getRequirement() == AuthenticationExecutionModel.Requirement.REQUIRED) {
-                    challenge = context.form()
-                            .setError("sms-auth.code.invalid")
-                            .createForm("sms-validation.ftl");
-                    context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS, challenge);
-                } else {
-                    // Something strange happened
-                    logger.warn("Undefined execution ...");
+            // get the user
+            UserModel user = context.getSession().users().getUserByUsername(phoneNumber, context.getRealm());
+
+            // get the OTP code from the authenticated model
+        	String code = getCode(context, user);
+        	
+        	if (code != null && !code.isEmpty()) {
+        		// if one exists - verify
+        		AuthenticatorConfigModel config = context.getAuthenticatorConfig();
+        		
+        		// The mobile number is configured --> send an SMS
+                long nrOfDigits = KeycloakSmsAuthenticatorUtil.getConfigLong(config, KeycloakSmsConstants.CONF_PRP_SMS_CODE_LENGTH, 8L);
+                logger.debug("Using nrOfDigits " + nrOfDigits);
+                
+                CODE_STATUS status = validateCode(context);
+                Response challenge = null;
+                switch (status) {
+                    case EXPIRED:
+                        challenge = context.form()
+                                .setError("sms-auth.code.expired")
+                                .createForm("sms-validation.ftl");
+                        context.failureChallenge(AuthenticationFlowError.EXPIRED_CODE, challenge);
+                        break;
+
+                    case INVALID:
+                        if (context.getExecution().getRequirement() == AuthenticationExecutionModel.Requirement.OPTIONAL ||
+                                context.getExecution().getRequirement() == AuthenticationExecutionModel.Requirement.ALTERNATIVE) {
+                            logger.debug("Calling context.attempted()");
+                            context.attempted();
+                        } else if (context.getExecution().getRequirement() == AuthenticationExecutionModel.Requirement.REQUIRED) {
+                            challenge = context.form()
+                                    .setError("sms-auth.code.invalid")
+                                    .createForm("sms-validation.ftl");
+                            context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS, challenge);
+                        } else {
+                            // Something strange happened
+                            logger.warn("Undefined execution ...");
+                        }
+                        break;
+
+                    case VALID:
+                        context.success();
+                        updateVerifiedMobilenumber(context);
+                        break;
+
                 }
-                break;
-
-            case VALID:
-                context.success();
-                updateVerifiedMobilenumber(context);
-                break;
-
+        	}
+        	else {
+        		// otherwise - send and wait
+        	}
         }
+        else {
+        	// error no phone number
+        }
+        
     }
 
+    /**
+     * Get the user entered code
+     */
+    protected String getPhoneNumber(AuthenticationFlowContext context) {
+	    MultivaluedMap<String, String> formData = context.getHttpRequest().getDecodedFormParameters();
+	    return formData.getFirst(KeycloakSmsConstants.ANSW_SMS_CODE);
+    }
+    
+    /**
+     * Get the stored OTP
+     */
+    public String getCode(AuthenticationFlowContext context, UserModel user) {
+    	String code = null;
+    
+    	if (context != null && user != null) {
+	    	KeycloakSession session = context.getSession();
+	
+	        List codeCreds = session.userCredentialManager().getStoredCredentialsByType(context.getRealm(), user, KeycloakSmsConstants.USR_CRED_MDL_SMS_CODE);
+	        /*List timeCreds = session.userCredentialManager().getStoredCredentialsByType(context.getRealm(), context.getUser(), KeycloakSmsAuthenticatorConstants.USR_CRED_MDL_SMS_EXP_TIME);*/
+	
+	        CredentialModel expectedCode = (CredentialModel) codeCreds.get(0);
+	        
+	        code = expectedCode.toString();
+    	}
+    	
+    	return code;
+    }
+    
     /**
      * If necessary update verified mobilenumber
      * @param context
