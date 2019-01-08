@@ -134,6 +134,8 @@ public class KeycloakSmsAuthenticator implements Authenticator {
     public void action(AuthenticationFlowContext context) {
         logger.debug("action called ... context = " + context);
         
+        AuthenticatorConfigModel config = context.getAuthenticatorConfig();
+        
         // get the phone number
         String phoneNumber = getPhoneNumber(context);
         
@@ -144,11 +146,10 @@ public class KeycloakSmsAuthenticator implements Authenticator {
             UserModel user = context.getSession().users().getUserByUsername(phoneNumber, context.getRealm());
 
             // get the OTP code from the authenticated model
-        	String code = getCode(context, user);
+        	String storedOTP = getCode(context, user);
         	
-        	if (code != null && !code.isEmpty()) {
+        	if (storedOTP != null && !storedOTP.isEmpty()) {
         		// if one exists - verify
-        		AuthenticatorConfigModel config = context.getAuthenticatorConfig();
         		
         		// The mobile number is configured --> send an SMS
                 long nrOfDigits = KeycloakSmsAuthenticatorUtil.getConfigLong(config, KeycloakSmsConstants.CONF_PRP_SMS_CODE_LENGTH, 8L);
@@ -188,7 +189,26 @@ public class KeycloakSmsAuthenticator implements Authenticator {
                 }
         	}
         	else {
-        		// otherwise - send and wait
+        		// otherwise - send SMS
+                long nrOfDigits = KeycloakSmsAuthenticatorUtil.getConfigLong(config, KeycloakSmsConstants.CONF_PRP_SMS_CODE_LENGTH, 8L);
+                logger.debug("Using nrOfDigits " + nrOfDigits);
+
+                long ttl = KeycloakSmsAuthenticatorUtil.getConfigLong(config, KeycloakSmsConstants.CONF_PRP_SMS_CODE_TTL, 10 * 60L); // 10 minutes in s
+
+                logger.debug("Using ttl " + ttl + " (s)");
+
+                String generatedOTP = KeycloakSmsAuthenticatorUtil.getSmsCode(nrOfDigits);
+
+                storeSMSCode(context, generatedOTP, new Date().getTime() + (ttl * 1000)); // s --> ms
+                if (KeycloakSmsAuthenticatorUtil.sendSmsCode(phoneNumber, generatedOTP, context)) {
+                    Response challenge = context.form().createForm("sms-validation.ftl");
+                    context.challenge(challenge);
+                } else {
+                    Response challenge = context.form()
+                            .setError("sms-auth.not.send")
+                            .createForm("sms-validation-error.ftl");
+                    context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR, challenge);
+                }
         	}
         }
         else {
@@ -202,7 +222,7 @@ public class KeycloakSmsAuthenticator implements Authenticator {
      */
     protected String getPhoneNumber(AuthenticationFlowContext context) {
 	    MultivaluedMap<String, String> formData = context.getHttpRequest().getDecodedFormParameters();
-	    return formData.getFirst(KeycloakSmsConstants.ANSW_SMS_CODE);
+	    return formData.getFirst(KeycloakSmsConstants.ATTR_MOBILE);
     }
     
     /**
@@ -217,9 +237,10 @@ public class KeycloakSmsAuthenticator implements Authenticator {
 	        List codeCreds = session.userCredentialManager().getStoredCredentialsByType(context.getRealm(), user, KeycloakSmsConstants.USR_CRED_MDL_SMS_CODE);
 	        /*List timeCreds = session.userCredentialManager().getStoredCredentialsByType(context.getRealm(), context.getUser(), KeycloakSmsAuthenticatorConstants.USR_CRED_MDL_SMS_EXP_TIME);*/
 	
-	        CredentialModel expectedCode = (CredentialModel) codeCreds.get(0);
-	        
-	        code = expectedCode.toString();
+	        if (codeCreds != null && codeCreds.size() > 0) {
+	        	CredentialModel expectedCode = (CredentialModel) codeCreds.get(0);
+	        	code = expectedCode.toString();
+	        }
     	}
     	
     	return code;
