@@ -98,7 +98,7 @@ public class KeycloakSmsAuthenticator implements Authenticator {
 	
 	                String code = KeycloakSmsAuthenticatorUtil.getSmsCode(nrOfDigits);
 	
-	                storeSMSCode(context, code, new Date().getTime() + (ttl * 1000)); // s --> ms
+	                storeSMSCode(context, user, code, new Date().getTime() + (ttl * 1000)); // s --> ms
 	                if (KeycloakSmsAuthenticatorUtil.sendSmsCode(mobileNumber, code, context)) {
 	                    Response challenge = context.form().createForm("sms-validation.ftl");
 	                    context.challenge(challenge);
@@ -136,60 +136,37 @@ public class KeycloakSmsAuthenticator implements Authenticator {
         
         AuthenticatorConfigModel config = context.getAuthenticatorConfig();
         
-        // get the phone number
-        String phoneNumber = getPhoneNumber(context);
+        UserModel user = context.getUser();
         
-        if (phoneNumber != null) {
-        	// validate and return if invalid
-
-            // get the user
-            UserModel user = context.getSession().users().getUserByUsername(phoneNumber, context.getRealm());
-
-            // get the OTP code from the authenticated model
-        	String storedOTP = getCode(context, user);
+        String phoneNumber = null;
+        if (user == null) {
+	        // get the phone number
+	        phoneNumber = getPhoneNumber(context);
+	        
+	        if (phoneNumber != null) {
+	        	// validate and return if invalid
+	
+	            // get the user and set them in context
+	            user = context.getSession().users().getUserByUsername(phoneNumber, context.getRealm());
+	            if (user != null) {
+	            	context.setUser(user);
+	            }
+	        }
+	        else {
+	        	// error: no phone number
+	        }
+        }
+        else {
+        	phoneNumber = user.getUsername();
+        }
+        
+        if (user != null) {
+        	// get the OTP code from the authenticated model
+        	String storedOTP = getStoredCode(context, user);
+        	String userEnteredOTP = getCode(context);
         	
-        	if (storedOTP != null && !storedOTP.isEmpty()) {
-        		// if one exists - verify
-        		
-        		// The mobile number is configured --> send an SMS
-                long nrOfDigits = KeycloakSmsAuthenticatorUtil.getConfigLong(config, KeycloakSmsConstants.CONF_PRP_SMS_CODE_LENGTH, 8L);
-                logger.debug("Using nrOfDigits " + nrOfDigits);
-                
-                CODE_STATUS status = validateCode(context);
-                Response challenge = null;
-                switch (status) {
-                    case EXPIRED:
-                        challenge = context.form()
-                                .setError("sms-auth.code.expired")
-                                .createForm("sms-validation.ftl");
-                        context.failureChallenge(AuthenticationFlowError.EXPIRED_CODE, challenge);
-                        break;
-
-                    case INVALID:
-                        if (context.getExecution().getRequirement() == AuthenticationExecutionModel.Requirement.OPTIONAL ||
-                                context.getExecution().getRequirement() == AuthenticationExecutionModel.Requirement.ALTERNATIVE) {
-                            logger.debug("Calling context.attempted()");
-                            context.attempted();
-                        } else if (context.getExecution().getRequirement() == AuthenticationExecutionModel.Requirement.REQUIRED) {
-                            challenge = context.form()
-                                    .setError("sms-auth.code.invalid")
-                                    .createForm("sms-validation.ftl");
-                            context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS, challenge);
-                        } else {
-                            // Something strange happened
-                            logger.warn("Undefined execution ...");
-                        }
-                        break;
-
-                    case VALID:
-                        context.success();
-                        updateVerifiedMobilenumber(context);
-                        break;
-
-                }
-        	}
-        	else {
-        		// otherwise - send SMS
+        	if (storedOTP == null && storedOTP.isEmpty()) {
+        		// no OTP - send one
                 long nrOfDigits = KeycloakSmsAuthenticatorUtil.getConfigLong(config, KeycloakSmsConstants.CONF_PRP_SMS_CODE_LENGTH, 8L);
                 logger.debug("Using nrOfDigits " + nrOfDigits);
 
@@ -199,7 +176,7 @@ public class KeycloakSmsAuthenticator implements Authenticator {
 
                 String generatedOTP = KeycloakSmsAuthenticatorUtil.getSmsCode(nrOfDigits);
 
-                storeSMSCode(context, generatedOTP, new Date().getTime() + (ttl * 1000)); // s --> ms
+                storeSMSCode(context, user, generatedOTP, new Date().getTime() + (ttl * 1000)); // s --> ms
                 if (KeycloakSmsAuthenticatorUtil.sendSmsCode(phoneNumber, generatedOTP, context)) {
                     Response challenge = context.form().createForm("sms-validation.ftl");
                     context.challenge(challenge);
@@ -210,25 +187,78 @@ public class KeycloakSmsAuthenticator implements Authenticator {
                     context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR, challenge);
                 }
         	}
+        	else {
+        		if (userEnteredOTP == null || userEnteredOTP.isEmpty()) {
+                    Response challenge = context.form().createForm("sms-validation.ftl");
+                    context.challenge(challenge);
+        		}
+        		else {
+        			// have both a stored and incoming code - verify
+        		
+	        		// The mobile number is configured --> send an SMS
+	                CODE_STATUS status = validateCode(context);
+	                Response challenge = null;
+	                switch (status) {
+	                    case EXPIRED:
+	                        challenge = context.form()
+	                                .setError("sms-auth.code.expired")
+	                                .createForm("sms-validation.ftl");
+	                        context.failureChallenge(AuthenticationFlowError.EXPIRED_CODE, challenge);
+	                        break;
+	
+	                    case INVALID:
+	                        if (context.getExecution().getRequirement() == AuthenticationExecutionModel.Requirement.OPTIONAL ||
+	                                context.getExecution().getRequirement() == AuthenticationExecutionModel.Requirement.ALTERNATIVE) {
+	                            logger.debug("Calling context.attempted()");
+	                            context.attempted();
+	                        } else if (context.getExecution().getRequirement() == AuthenticationExecutionModel.Requirement.REQUIRED) {
+	                            challenge = context.form()
+	                                    .setError("sms-auth.code.invalid")
+	                                    .createForm("sms-validation.ftl");
+	                            context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS, challenge);
+	                        } else {
+	                            // Something strange happened
+	                            logger.warn("Undefined execution ...");
+	                        }
+	                        break;
+	
+	                    case VALID:
+	                        context.success();
+	                        updateVerifiedMobilenumber(context);
+	                        break;
+	
+	                }
+        		}
+        	}
         }
         else {
-        	// error no phone number
-        }
-        
+        	// error: no user
+        }        
     }
 
     /**
-     * Get the user entered code
+     * Get the user entered phone number
      */
     protected String getPhoneNumber(AuthenticationFlowContext context) {
 	    MultivaluedMap<String, String> formData = context.getHttpRequest().getDecodedFormParameters();
 	    return formData.getFirst(KeycloakSmsConstants.ATTR_MOBILE);
     }
     
+    /** 
+     * Get the user entered OTP
+     */
+    protected String getCode(AuthenticationFlowContext context) {
+    	MultivaluedMap<String, String> formData = context.getHttpRequest().getDecodedFormParameters();
+        return formData.getFirst(KeycloakSmsConstants.ANSW_SMS_CODE);
+    }
+    
+    
     /**
      * Get the stored OTP
+     * 
+     * TODO: expiry
      */
-    public String getCode(AuthenticationFlowContext context, UserModel user) {
+    public String getStoredCode(AuthenticationFlowContext context, UserModel user) {
     	String code = null;
     
     	if (context != null && user != null) {
@@ -266,16 +296,16 @@ public class KeycloakSmsAuthenticator implements Authenticator {
 
     // Store the code + expiration time in a UserCredential. Keycloak will persist these in the DB.
     // When the code is validated on another node (in a clustered environment) the other nodes have access to it's values too.
-    private void storeSMSCode(AuthenticationFlowContext context, String code, Long expiringAt) {
+    private void storeSMSCode(AuthenticationFlowContext context, UserModel user, String code, Long expiringAt) {
         UserCredentialModel credentials = new UserCredentialModel();
         credentials.setType(KeycloakSmsConstants.USR_CRED_MDL_SMS_CODE);
         credentials.setValue(code);
 
-        context.getSession().userCredentialManager().updateCredential(context.getRealm(), context.getUser(), credentials);
+        context.getSession().userCredentialManager().updateCredential(context.getRealm(), user, credentials);
 
         credentials.setType(KeycloakSmsConstants.USR_CRED_MDL_SMS_EXP_TIME);
         credentials.setValue((expiringAt).toString());
-        context.getSession().userCredentialManager().updateCredential(context.getRealm(), context.getUser(), credentials);
+        context.getSession().userCredentialManager().updateCredential(context.getRealm(), user, credentials);
     }
 
 
