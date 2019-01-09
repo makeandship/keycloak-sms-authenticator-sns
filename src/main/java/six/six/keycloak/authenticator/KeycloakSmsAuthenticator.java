@@ -165,7 +165,7 @@ public class KeycloakSmsAuthenticator implements Authenticator {
         	String storedOTP = getStoredCode(context, user);
         	String userEnteredOTP = getCode(context);
         	
-        	if (storedOTP == null && storedOTP.isEmpty()) {
+        	if (storedOTP == null || storedOTP.isEmpty()) {
         		// no OTP - send one
                 long nrOfDigits = KeycloakSmsAuthenticatorUtil.getConfigLong(config, KeycloakSmsConstants.CONF_PRP_SMS_CODE_LENGTH, 8L);
                 logger.debug("Using nrOfDigits " + nrOfDigits);
