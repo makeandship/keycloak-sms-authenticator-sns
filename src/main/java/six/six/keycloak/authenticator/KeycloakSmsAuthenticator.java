@@ -11,6 +11,11 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserCredentialModel;
 import org.keycloak.models.UserModel;
+
+import com.google.i18n.phonenumbers.NumberParseException;
+import com.google.i18n.phonenumbers.PhoneNumberUtil;
+import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
+
 import six.six.keycloak.KeycloakSmsConstants;
 import six.six.keycloak.requiredaction.action.required.KeycloakSmsMobilenumberRequiredAction;
 
@@ -143,7 +148,7 @@ public class KeycloakSmsAuthenticator implements Authenticator {
 	        // get the phone number
 	        phoneNumber = getPhoneNumber(context);
 	        
-	        if (phoneNumber != null) {
+	        if (phoneNumber != null && isPhoneNumberValid(phoneNumber)) {
 	        	// validate and return if invalid
 	
 	            // get the user and set them in context
@@ -153,7 +158,11 @@ public class KeycloakSmsAuthenticator implements Authenticator {
 	            }
 	        }
 	        else {
-	        	// error: no phone number
+	            Response challenge = context.form()
+	                    .setError("sms-auth.phone.not.valid")
+	                    .createForm("sms-validation-mobile-number-login.ftl");
+	            context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR, challenge);
+	            return;
 	        }
         }
         else {
@@ -237,6 +246,17 @@ public class KeycloakSmsAuthenticator implements Authenticator {
                     .createForm("sms-validation-mobile-number-login.ftl");
             context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR, challenge);
         }        
+    }
+
+    private boolean isPhoneNumberValid(String phoneNumber) {
+        PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
+        PhoneNumber number;
+        try {
+            number = phoneUtil.parse(phoneNumber, null);
+            return phoneUtil.isValidNumber(number);
+        } catch (NumberParseException e) {
+            return false;
+        }
     }
 
     /**
