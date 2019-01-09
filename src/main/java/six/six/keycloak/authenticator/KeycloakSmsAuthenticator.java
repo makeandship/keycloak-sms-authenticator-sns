@@ -232,7 +232,10 @@ public class KeycloakSmsAuthenticator implements Authenticator {
         	}
         }
         else {
-        	// error: no user
+            Response challenge = context.form()
+                    .setError("sms-auth.phone.not.found")
+                    .createForm("sms-validation-mobile-number-login.ftl");
+            context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR, challenge);
         }        
     }
 
