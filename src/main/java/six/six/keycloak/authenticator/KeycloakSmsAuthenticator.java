@@ -307,7 +307,6 @@ public class KeycloakSmsAuthenticator implements Authenticator {
 	        if (codeCreds != null && codeCreds.size() > 0) {
 	        	CredentialModel expectedCode = (CredentialModel) codeCreds.get(0);
 	        	
-	        	
 	        	if (timeCreds != null && timeCreds.size() > 0) {
 		        	CredentialModel expTimeString = (CredentialModel) timeCreds.get(0);
 		        	
