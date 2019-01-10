@@ -189,12 +189,13 @@ public class KeycloakSmsAuthenticatorUtil {
                     smsService=new SnsNotificationService();
             }
 
-            result=smsService.send(
+            result=true;
+            /*smsService.send(
             		checkMobileNumber(setDefaultCountryCodeIfZero(mobileNumber, getMessage(context, KeycloakSmsConstants.MSG_MOBILE_PREFIX_DEFAULT), getMessage(context, KeycloakSmsConstants.MSG_MOBILE_PREFIX_CONDITION))), 
             		sender,
             		smsText, 
             		smsUsr, 
-            		smsPwd);
+            		smsPwd);*/
           return result;
        } catch(Exception e) {
             logger.error("Fail to send SMS " ,e );

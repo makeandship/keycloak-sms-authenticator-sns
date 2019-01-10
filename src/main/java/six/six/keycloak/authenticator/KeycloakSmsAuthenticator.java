@@ -48,12 +48,13 @@ public class KeycloakSmsAuthenticator implements Authenticator {
     	String mobileNumber = null;
     	
     	if (user != null) {
-	        List<String> mobileNumberCreds = user.getAttribute(KeycloakSmsConstants.ATTR_MOBILE);
-	
-	        
-	        if (mobileNumberCreds != null && !mobileNumberCreds.isEmpty()) {
-	            mobileNumber = mobileNumberCreds.get(0);
-	        }
+//	        List<String> mobileNumberCreds = user.getAttribute(KeycloakSmsConstants.ATTR_MOBILE);
+//	
+//	        
+//	        if (mobileNumberCreds != null && !mobileNumberCreds.isEmpty()) {
+//	            mobileNumber = mobileNumberCreds.get(0);
+//	        }
+    		mobileNumber = user.getUsername();
     	}
 
         return  mobileNumber;
@@ -75,7 +76,7 @@ public class KeycloakSmsAuthenticator implements Authenticator {
 
     @Override
     public void authenticate(AuthenticationFlowContext context) {
-        logger.debug("authenticate called ... context = " + context);
+    	logger.debug("authenticate called ... context = " + context);
         UserModel user = context.getUser();
         AuthenticatorConfigModel config = context.getAuthenticatorConfig();
 
@@ -83,11 +84,10 @@ public class KeycloakSmsAuthenticator implements Authenticator {
         	Response challenge = context.form().createForm("sms-validation-mobile-number-login.ftl");
             context.challenge(challenge);
         }
-        else {
-        
-	        boolean onlyForVerification=KeycloakSmsAuthenticatorUtil.getConfigBoolean(config, KeycloakSmsConstants.MOBILE_VERIFICATION_ENABLED);
+        else {        
+	        boolean onlyForVerification = KeycloakSmsAuthenticatorUtil.getConfigBoolean(config, KeycloakSmsConstants.MOBILE_VERIFICATION_ENABLED);
 	
-	        String mobileNumber =getMobileNumber(user);
+	        String mobileNumber = getMobileNumber(user);
 	        String mobileNumberVerified = getMobileNumberVerified(user);
 	
 	        if (onlyForVerification==false || isOnlyForVerificationMode(onlyForVerification, mobileNumber,mobileNumberVerified)){
@@ -288,11 +288,25 @@ public class KeycloakSmsAuthenticator implements Authenticator {
 	    	KeycloakSession session = context.getSession();
 	
 	        List codeCreds = session.userCredentialManager().getStoredCredentialsByType(context.getRealm(), user, KeycloakSmsConstants.USR_CRED_MDL_SMS_CODE);
-	        /*List timeCreds = session.userCredentialManager().getStoredCredentialsByType(context.getRealm(), context.getUser(), KeycloakSmsAuthenticatorConstants.USR_CRED_MDL_SMS_EXP_TIME);*/
+	        List timeCreds = session.userCredentialManager().getStoredCredentialsByType(context.getRealm(), user, KeycloakSmsConstants.USR_CRED_MDL_SMS_EXP_TIME);
 	
+	        List creds = session.userCredentialManager().getStoredCredentials(context.getRealm(), user);
+	        
 	        if (codeCreds != null && codeCreds.size() > 0) {
 	        	CredentialModel expectedCode = (CredentialModel) codeCreds.get(0);
-	        	code = expectedCode.toString();
+	        	
+	        	
+	        	if (timeCreds != null && timeCreds.size() > 0) {
+		        	CredentialModel expTimeString = (CredentialModel) timeCreds.get(0);
+		        	
+		        	long expiry = Long.parseLong(expTimeString.getValue());
+		        	long now = new Date().getTime();
+		        	
+		        	if (expiry < now) {
+		        		code = expectedCode.getValue();
+		        	}
+		        }
+	        	
 	        }
     	}
     	
