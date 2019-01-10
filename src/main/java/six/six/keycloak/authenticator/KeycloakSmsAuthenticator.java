@@ -14,6 +14,7 @@ import org.keycloak.models.UserModel;
 
 import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
+import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
 import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
 
 import six.six.keycloak.KeycloakSmsConstants;
@@ -149,7 +150,7 @@ public class KeycloakSmsAuthenticator implements Authenticator {
 	        phoneNumber = getPhoneNumber(context);
 	        
 	        if (phoneNumber != null && isPhoneNumberValid(phoneNumber)) {
-	        	// validate and return if invalid
+	            phoneNumber = formatNumber(phoneNumber);
 	
 	            // get the user and set them in context
 	            user = context.getSession().users().getUserByUsername(phoneNumber, context.getRealm());
@@ -246,6 +247,17 @@ public class KeycloakSmsAuthenticator implements Authenticator {
                     .createForm("sms-validation-mobile-number-login.ftl");
             context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR, challenge);
         }        
+    }
+
+    private String formatNumber(String phoneNumber) {
+        PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
+        PhoneNumber number;
+        try {
+            number = phoneUtil.parse(phoneNumber, null);
+            return phoneUtil.format(number, PhoneNumberFormat.E164);
+        } catch (NumberParseException e) {
+            return phoneNumber;
+        }
     }
 
     private boolean isPhoneNumberValid(String phoneNumber) {
