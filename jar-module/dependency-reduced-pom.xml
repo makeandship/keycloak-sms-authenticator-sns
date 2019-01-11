@@ -7,6 +7,16 @@
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>keycloak-sms-authenticator-sns-module</artifactId>
+  <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <includes>
+          <include>**/services/*</include>
+        </includes>
+      </resource>
+    </resources>
+  </build>
   <dependencies>
     <dependency>
       <groupId>org.keycloak</groupId>
