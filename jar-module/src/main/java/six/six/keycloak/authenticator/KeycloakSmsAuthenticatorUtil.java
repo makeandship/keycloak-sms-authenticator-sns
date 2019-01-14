@@ -175,7 +175,8 @@ public class KeycloakSmsAuthenticatorUtil {
         String endpoint = EnvSubstitutor.envSubstitutor.replace(getConfigString(config, KeycloakSmsConstants.CONF_PRP_SMS_GATEWAY_ENDPOINT));
         boolean isProxy = getConfigBoolean(config, KeycloakSmsConstants.PROXY_ENABLED);
 
-        String template =getMessage(context, KeycloakSmsConstants.CONF_PRP_SMS_TEXT);
+        String sender = getMessage(context, KeycloakSmsConstants.CONF_PRP_SMS_SENDER);
+        String template = getMessage(context, KeycloakSmsConstants.CONF_PRP_SMS_TEXT);
 
         String smsText = createMessage(template,code, mobileNumber);
         boolean result;
@@ -190,8 +191,13 @@ public class KeycloakSmsAuthenticatorUtil {
                     smsService=new SnsNotificationService();
             }
 
-            result=smsService.send(checkMobileNumber(setDefaultCountryCodeIfZero(mobileNumber, getMessage(context, KeycloakSmsConstants.MSG_MOBILE_PREFIX_DEFAULT), getMessage(context, KeycloakSmsConstants.MSG_MOBILE_PREFIX_CONDITION))), smsText, smsUsr, smsPwd);
-          return result;
+            result=smsService.send(
+            		checkMobileNumber(setDefaultCountryCodeIfZero(mobileNumber, getMessage(context, KeycloakSmsConstants.MSG_MOBILE_PREFIX_DEFAULT), getMessage(context, KeycloakSmsConstants.MSG_MOBILE_PREFIX_CONDITION))), 
+            		sender,
+            		smsText, 
+            		smsUsr, 
+            		smsPwd);
+            return result;
        } catch(Exception e) {
             logger.error("Fail to send SMS " ,e );
             return false;
