@@ -235,6 +235,7 @@ public class KeycloakSmsAuthenticator implements Authenticator {
 	                    case VALID:
 	                        context.success();
 	                        updateVerifiedMobilenumber(context);
+	                        // clear OTP and TTL
 	                        break;
 	
 	                }
