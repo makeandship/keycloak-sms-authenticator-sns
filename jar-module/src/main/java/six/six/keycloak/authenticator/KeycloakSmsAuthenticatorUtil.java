@@ -212,7 +212,11 @@ public class KeycloakSmsAuthenticatorUtil {
         double maxValue = Math.pow(10.0, nrOfDigits); // 10 ^ nrOfDigits;
         Random r = new Random();
         long code = (long) (r.nextFloat() * maxValue);
-        return Long.toString(code);
+        
+        // left pad with 0s if this is less that the required digits
+        String format = new StringBuffer("%0").append(nrOfDigits).append("d").toString();
+        String formattedCode = String.format(format, code);
+        return formattedCode;
     }
 
     public static boolean validateTelephoneNumber(String telephoneNumber, String regexp ) {
