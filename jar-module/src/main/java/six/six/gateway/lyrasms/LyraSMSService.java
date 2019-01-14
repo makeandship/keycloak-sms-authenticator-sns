@@ -55,7 +55,7 @@ public class LyraSMSService implements SMSService {
 
     }
 
-    public boolean send(String phoneNumber, String message, String login, String pw) {
+    public boolean send(String phoneNumber, String sender, String message, String login, String pw) {
         boolean result;
         if (phoneNumber != null) {
             //Support only this format 3367...

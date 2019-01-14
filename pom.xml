@@ -7,7 +7,12 @@
     <groupId>six.six</groupId>
     <artifactId>keycloak-sms-authenticator-sns</artifactId>
     <version>2.0.0</version>
-    <packaging>jar</packaging>
+    <packaging>pom</packaging>
+    
+    <modules>
+        <module>ear-module</module>
+        <module>jar-module</module>
+    </modules>
 
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
@@ -21,6 +26,7 @@
         <version.commons-lang>2.6</version.commons-lang>
         <version.picketbox>5.0.2.Final</version.picketbox>
     </properties>
+    
     <build>
         <plugins>
             <plugin>
@@ -46,6 +52,14 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.wildfly.plugins</groupId>
+                <artifactId>wildfly-maven-plugin</artifactId>
+                <version>${version.wildfly}</version>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
             </plugin>
         </plugins>
     </build>
