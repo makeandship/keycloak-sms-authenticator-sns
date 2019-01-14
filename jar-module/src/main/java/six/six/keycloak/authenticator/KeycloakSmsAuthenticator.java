@@ -235,7 +235,7 @@ public class KeycloakSmsAuthenticator implements Authenticator {
 	                    case VALID:
 	                        context.success();
 	                        updateVerifiedMobilenumber(context);
-	                        // clear OTP and TTL
+	                        clearSMSCode(context, user);
 	                        break;
 	
 	                }
@@ -355,6 +355,26 @@ public class KeycloakSmsAuthenticator implements Authenticator {
         credentials.setType(KeycloakSmsConstants.USR_CRED_MDL_SMS_EXP_TIME);
         credentials.setValue((expiringAt).toString());
         context.getSession().userCredentialManager().updateCredential(context.getRealm(), user, credentials);
+    }
+    
+    // Clear the code + expiration time in a UserCredential. Keycloak will clear these from the DB.
+    private void clearSMSCode(AuthenticationFlowContext context, UserModel user) {
+    	if (context != null && context != null) {
+	    	RealmModel realm = context.getRealm();
+	    	
+	    	if (realm != null) {
+	    		context.getSession().userCredentialManager().removeStoredCredential(
+    				realm, 
+    				user, 
+    				KeycloakSmsConstants.USR_CRED_MDL_SMS_CODE
+    			);
+	    		context.getSession().userCredentialManager().removeStoredCredential(
+	    			realm, 
+	    			user, 
+	    			KeycloakSmsConstants.USR_CRED_MDL_SMS_EXP_TIME
+	    		);
+	    	}
+    	}
     }
 
 
