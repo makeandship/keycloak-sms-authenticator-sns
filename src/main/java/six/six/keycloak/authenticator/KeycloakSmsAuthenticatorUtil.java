@@ -8,6 +8,7 @@ import org.jboss.logging.Logger;
 import org.keycloak.authentication.AuthenticationFlowContext;
 import org.keycloak.authentication.RequiredActionContext;
 import org.keycloak.models.AuthenticatorConfigModel;
+import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.theme.Theme;
 import org.keycloak.theme.ThemeProvider;
@@ -137,8 +138,9 @@ public class KeycloakSmsAuthenticatorUtil {
     public static String getMessage(AuthenticationFlowContext context, String key){
         String result=null;
         try {
+        	RealmModel realm = context.getRealm();
             ThemeProvider themeProvider = context.getSession().getProvider(ThemeProvider.class, "extending");
-            Theme currentTheme = themeProvider.getTheme(context.getRealm().getLoginTheme(), Theme.Type.LOGIN);
+            Theme currentTheme = themeProvider.getTheme(realm.getLoginTheme(), Theme.Type.LOGIN);
             Locale locale = context.getSession().getContext().resolveLocale(context.getUser());
             result = currentTheme.getMessages(locale).getProperty(key);
         }catch (IOException e){
