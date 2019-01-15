@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jboss-deployment-structure>
+    <deployment>
+        <module-alias name="deployment.keycloak-sms-authenticator-sns"/>
+    </deployment>
+    <sub-deployment name="keycloak-sms-authenticator-sns-module.jar">
+        <dependencies>
+        	<module name="org.keycloak.keycloak-services"/>
+            <module name="com.google.i18n.phonenumbers"/>
+            <module name="org.picketbox.picketbox"/>
+        </dependencies>
+    </sub-deployment>
+    
+</jboss-deployment-structure>

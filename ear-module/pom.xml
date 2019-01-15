@@ -1,24 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    
-    <parent>
-        <groupId>six.six</groupId>
-    	<artifactId>keycloak-sms-authenticator-sns</artifactId>
-    	<version>2.0.0</version>
-    </parent>
-    
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>keycloak-sms-authenticator-sns-provider</artifactId>
+    <name>SMS Authenticator via Amazon SNS EAR</name>
+
+    <parent>
+        <groupId>six.six</groupId>
+        <artifactId>keycloak-sms-authenticator-sns-parent</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>keycloak-sms-authenticator-sns</artifactId>
     <packaging>ear</packaging>
 
     <dependencies>
         <dependency>
             <groupId>six.six</groupId>
             <artifactId>keycloak-sms-authenticator-sns-module</artifactId>
-            <version>${project.version}</version>
+            <version>1.0-SNAPSHOT</version>
         </dependency>
     </dependencies>
 
@@ -27,19 +27,21 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-ear-plugin</artifactId>
+                <version>2.10.1</version>
                 <configuration>
-                    <includeLibInApplicationXml>true</includeLibInApplicationXml>
+                    <defaultLibBundleDir>lib</defaultLibBundleDir>
+                    <modules>
+                        <jarModule>
+                            <groupId>six.six</groupId>
+                            <artifactId>keycloak-sms-authenticator-sns-module</artifactId>
+                            <includeInApplicationXml>true</includeInApplicationXml>
+                            <bundleFileName>keycloak-sms-authenticator-sns-module.jar</bundleFileName>
+                            <bundleDir>/</bundleDir>
+                        </jarModule>
+                    </modules>
                 </configuration>
             </plugin>
-
-            <plugin>
-                <groupId>org.wildfly.plugins</groupId>
-                <artifactId>wildfly-maven-plugin</artifactId>
-                <configuration>
-                    <skip>false</skip>
-                </configuration>
-            </plugin>
-
         </plugins>
     </build>
+
 </project>
