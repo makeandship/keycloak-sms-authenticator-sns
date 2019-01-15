@@ -300,10 +300,8 @@ public class KeycloakSmsAuthenticator implements Authenticator {
     	if (context != null && user != null) {
 	    	KeycloakSession session = context.getSession();
 	
-	        List codeCreds = session.userCredentialManager().getStoredCredentialsByType(context.getRealm(), user, KeycloakSmsConstants.USR_CRED_MDL_SMS_CODE);
-	        List timeCreds = session.userCredentialManager().getStoredCredentialsByType(context.getRealm(), user, KeycloakSmsConstants.USR_CRED_MDL_SMS_EXP_TIME);
-	
-	        List creds = session.userCredentialManager().getStoredCredentials(context.getRealm(), user);
+	        List<CredentialModel> codeCreds = session.userCredentialManager().getStoredCredentialsByType(context.getRealm(), user, KeycloakSmsConstants.USR_CRED_MDL_SMS_CODE);
+	        List<CredentialModel> timeCreds = session.userCredentialManager().getStoredCredentialsByType(context.getRealm(), user, KeycloakSmsConstants.USR_CRED_MDL_SMS_EXP_TIME);
 	        
 	        if (codeCreds != null && codeCreds.size() > 0) {
 	        	CredentialModel expectedCode = (CredentialModel) codeCreds.get(0);
@@ -314,7 +312,7 @@ public class KeycloakSmsAuthenticator implements Authenticator {
 		        	long expiry = Long.parseLong(expTimeString.getValue());
 		        	long now = new Date().getTime();
 		        	
-		        	if (expiry < now) {
+		        	if (expiry >= now) {
 		        		code = expectedCode.getValue();
 		        	}
 		        }
