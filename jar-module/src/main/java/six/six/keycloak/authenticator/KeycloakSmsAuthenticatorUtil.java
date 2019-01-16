@@ -167,7 +167,7 @@ public class KeycloakSmsAuthenticatorUtil {
         final AuthenticatorConfigModel config = context.getAuthenticatorConfig();
 
         // Send an SMS
-        KeycloakSmsAuthenticatorUtil.logger.debug("Sending " + code + "  to mobileNumber " + mobileNumber);
+        KeycloakSmsAuthenticatorUtil.logger.debug("Sending " + code + " to mobileNumber " + mobileNumber);
 
         String smsUsr = EnvSubstitutor.envSubstitutor.replace(getConfigString(config, KeycloakSmsConstants.CONF_PRP_SMS_CLIENTTOKEN));
         String smsPwd = EnvSubstitutor.envSubstitutor.replace(getConfigString(config, KeycloakSmsConstants.CONF_PRP_SMS_CLIENTSECRET));
@@ -177,21 +177,24 @@ public class KeycloakSmsAuthenticatorUtil {
 
         String sender = getMessage(context, KeycloakSmsConstants.CONF_PRP_SMS_SENDER);
         String template = getMessage(context, KeycloakSmsConstants.CONF_PRP_SMS_TEXT);
+        
+        KeycloakSmsAuthenticatorUtil.logger.debug("Sender " + sender);
+        KeycloakSmsAuthenticatorUtil.logger.debug("Template " + template);
 
         String smsText = createMessage(template,code, mobileNumber);
         boolean result;
         SMSService smsService;
         try {
-            Gateways g=Gateways.valueOf(gateway);
+            Gateways g = Gateways.valueOf(gateway);
             switch(g) {
                 case LYRA_SMS:
-                    smsService=new LyraSMSService(endpoint,isProxy);
+                    smsService = new LyraSMSService(endpoint, isProxy);
                     break;
                 default:
-                    smsService=new SnsNotificationService();
+                    smsService = new SnsNotificationService();
             }
 
-            result=smsService.send(
+            result = smsService.send(
             		checkMobileNumber(setDefaultCountryCodeIfZero(mobileNumber, getMessage(context, KeycloakSmsConstants.MSG_MOBILE_PREFIX_DEFAULT), getMessage(context, KeycloakSmsConstants.MSG_MOBILE_PREFIX_CONDITION))), 
             		sender,
             		smsText, 
