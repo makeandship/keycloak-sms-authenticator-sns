@@ -17,6 +17,7 @@
 				<directory>src/main/resources</directory>
 				<includes>
 					<include>**/services/*</include>
+					<include>**/jboss-deployment-structure.xml</include>
 				</includes>
 			</resource>
 		</resources>
@@ -89,4 +90,5 @@
             <version>${version.picketbox}</version>
         </dependency>
     </dependencies>
+    
 </project>
